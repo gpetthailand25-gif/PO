@@ -397,20 +397,54 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
   //     }
   //   }
 
-  firebase.initializeApp(firebaseConfig);
-  const _db = firebase.firestore();
-  const _auth = firebase.auth();
-
   let _resolveReady;
+  let _firebaseOk = true;
+  let _authResolved = false;
   const _storageReady = new Promise(resolve => {
     _resolveReady = resolve;
   });
-  _auth.onAuthStateChanged(user => {
-    if (user) _resolveReady();
-  });
-  _auth.signInAnonymously().catch(err => {
-    console.error("Firebase: เข้าสู่ระบบแบบไม่ระบุตัวตนไม่สำเร็จ ตรวจสอบว่าเปิดใช้ Anonymous sign-in ใน Firebase Console แล้วหรือยัง", err);
-  });
+  function _showFirebaseError(msg) {
+    _firebaseOk = false;
+    const banner = document.getElementById("storage-banner");
+    if (banner) {
+      banner.style.background = "#FCE4E4";
+      banner.style.borderColor = "#F0B4B4";
+      banner.style.color = "#8A1F1F";
+      banner.textContent = "⚠ เชื่อมต่อ Firebase ไม่สำเร็จ: " + msg + " — ตรวจสอบว่าแก้ค่า firebaseConfig ในซอร์สโค้ดเป็นของโปรเจกต์จริงแล้ว และเปิดใช้ Firestore + Anonymous sign-in ใน Firebase Console แล้ว ข้อมูลจะยังใช้งานได้ชั่วคราวในเครื่องนี้จนกว่าจะแก้ให้ถูกต้อง";
+    }
+    _resolveReady(); // never hang forever — let the app continue with a local fallback
+  }
+
+  let _db, _auth;
+  try {
+    if (String(firebaseConfig.apiKey || "").indexOf("PASTE_YOUR") === 0) {
+      throw new Error("ยังไม่ได้ใส่ค่า firebaseConfig (ยังเป็นค่าเริ่มต้น PASTE_YOUR_...)");
+    }
+    firebase.initializeApp(firebaseConfig);
+    _db = firebase.firestore();
+    _auth = firebase.auth();
+    _auth.onAuthStateChanged(user => {
+      if (user) {
+        _authResolved = true;
+        _resolveReady();
+      }
+    });
+    _auth.signInAnonymously().catch(err => {
+      console.error("Firebase: เข้าสู่ระบบแบบไม่ระบุตัวตนไม่สำเร็จ ตรวจสอบว่าเปิดใช้ Anonymous sign-in ใน Firebase Console แล้วหรือยัง", err);
+      _showFirebaseError(err.message || String(err));
+    });
+    // safety net: if auth never responds within 10s (network blocked, misconfigured project, etc.), stop waiting
+    setTimeout(() => {
+      if (_firebaseOk && !_authResolved) _showFirebaseError("หมดเวลารอการเชื่อมต่อ (10 วินาที)");
+    }, 10000);
+  } catch (err) {
+    console.error("Firebase: ตั้งค่าไม่สำเร็จ", err);
+    _showFirebaseError(err.message || String(err));
+  }
+
+  // Local fallback store used only if Firebase never connects, so the app is still usable
+  // (data in this fallback is temporary — lost on refresh — until firebaseConfig is fixed).
+  const _localFallback = {};
 
   // window.storage API เดิม (get/set/delete/list) แต่เก็บข้อมูลจริงถาวรบน Firestore แทนหน่วยความจำชั่วคราว
   window.storage = (function () {
@@ -422,6 +456,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     return {
       get: async function (key, shared) {
         await _storageReady;
+        if (!_firebaseOk) return (key in _localFallback) ? { key: key, value: _localFallback[key], shared: !!shared } : null;
         const snap = await ref(key).get();
         if (!snap.exists) return null;
         const data = snap.data();
@@ -429,6 +464,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       },
       set: async function (key, value, shared) {
         await _storageReady;
+        if (!_firebaseOk) {
+          _localFallback[key] = value;
+          return { key: key, value: value, shared: !!shared };
+        }
         await ref(key).set({
           value: value,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -437,6 +476,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       },
       "delete": async function (key, shared) {
         await _storageReady;
+        if (!_firebaseOk) {
+          const existed = key in _localFallback;
+          delete _localFallback[key];
+          return { key: key, deleted: existed, shared: !!shared };
+        }
         const snap = await ref(key).get();
         const existed = snap.exists;
         await ref(key).delete();
@@ -444,6 +488,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       },
       list: async function (prefix, shared) {
         await _storageReady;
+        if (!_firebaseOk) {
+          const keys = Object.keys(_localFallback).filter(k => !prefix || k.indexOf(prefix) === 0);
+          return { keys: keys, prefix: prefix, shared: !!shared };
+        }
         const qs = await _db.collection(FIRESTORE_COLLECTION).get();
         const keys = qs.docs.map(d => d.id).filter(id => !prefix || id.indexOf(prefix) === 0);
         return { keys: keys, prefix: prefix, shared: !!shared };
