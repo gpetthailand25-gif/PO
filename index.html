@@ -17,17 +17,6 @@
     font-family: var(--font-sans);
   }
   #root { max-width: 1200px; margin: 0 auto; padding: 20px; }
-  #storage-banner {
-    max-width: 1200px;
-    margin: 12px auto 0;
-    padding: 10px 16px;
-    background: #FFF3DA;
-    border: 1px solid #F2D9A0;
-    color: #7A5A0E;
-    border-radius: 8px;
-    font-size: 12.5px;
-    font-family: var(--font-sans);
-  }
 .ti { font-style: normal; display: inline-block; line-height: 1; }
 .ti-upload::before { content: "\2b06\fe0f"; }
 .ti-plus::before { content: "+"; font-weight: 700; }
@@ -55,9 +44,6 @@
 </style>
 </head>
 <body>
-<div id="storage-banner">
-  หมายเหตุ: ไฟล์นี้เชื่อมต่อกับ Firebase (Firestore) เพื่อบันทึกข้อมูลถาวรและใช้ร่วมกันทั้งทีม — ก่อนใช้งานจริง ต้องแก้ค่า <code>firebaseConfig</code> ในซอร์สโค้ดให้เป็นของโปรเจกต์ Firebase ของคุณ และเปิดใช้ Firestore + Anonymous sign-in ใน Firebase Console ก่อน (ดูคอมเมนต์ในโค้ด)
-</div>
 <div id="root"></div>
 
 <script>
@@ -362,143 +348,7 @@ var d=null!=c&&c.hydratedSources||null,e=!1,f="",g=aj;null!==c&&void 0!==c&&(!0=
 function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmountComponentAtNode=function(a){if(!Vd(a))throw Error(m(40));return a._reactRootContainer?(yb(function(){Wd(null,null,a,!1,function(){a._reactRootContainer=null;a[Ja]=null})}),!0):!1};Q.unstable_batchedUpdates=Tf;Q.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!Vd(c))throw Error(m(200));if(null==a||void 0===a._reactInternals)throw Error(m(38));return Wd(a,b,c,!1,d)};Q.version="18.3.1-next-f1338f8080-20240426"});
 })();
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-  // ============================================================
-  // FIREBASE SETUP — แก้ค่าด้านล่างนี้เป็นของโปรเจกต์ Firebase ของคุณ
-  // (Firebase Console > ⚙️ Project settings > General > เลื่อนลงไปที่
-  //  "Your apps" > เลือกเว็บแอป (</>) > SDK setup and configuration > Config)
-  // ============================================================
-  const firebaseConfig = {
-  apiKey: "AIzaSyBxEa_yKLTzGz-ICV_bsZDVU1NHx8MiOTg",
-  authDomain: "po-innova.firebaseapp.com",
-  projectId: "po-innova",
-  storageBucket: "po-innova.firebasestorage.app",
-  messagingSenderId: "847160966036",
-  appId: "1:847160966036:web:1688cf337d184c6c9bed81",
-  measurementId: "G-TMKYJCCEYC"
-  };
-  // ทุกคนที่เปิดไฟล์นี้จะอ่าน/เขียนข้อมูลชุดเดียวกัน ภายใต้ collection นี้ใน Firestore
-  const FIRESTORE_COLLECTION = "po_tracker_data";
-
-  // ต้องเปิดใช้ "Firestore Database" และ "Authentication > Sign-in method > Anonymous"
-  // ในหน้า Firebase Console ก่อน (ไม่ต้องทำหน้า login ใดๆ ในแอป — ระบบจะล็อกอินแบบไม่ระบุตัวตน
-  // ให้อัตโนมัติเบื้องหลัง เพื่อให้ตั้งกฎความปลอดภัยของ Firestore แบบ "ต้องล็อกอินก่อนถึงจะอ่าน/เขียนได้"
-  // ได้ โดยผู้ใช้ไม่ต้องกรอกอะไรเลย)
-  //
-  // ตัวอย่าง Firestore Security Rules ที่ใช้คู่กับโค้ดนี้ได้:
-  //   rules_version = '2';
-  //   service cloud.firestore {
-  //     match /databases/{database}/documents {
-  //       match /po_tracker_data/{docId} {
-  //         allow read, write: if request.auth != null;
-  //       }
-  //     }
-  //   }
-
-  let _resolveReady;
-  let _firebaseOk = true;
-  let _authResolved = false;
-  const _storageReady = new Promise(resolve => {
-    _resolveReady = resolve;
-  });
-  function _showFirebaseError(msg) {
-    _firebaseOk = false;
-    const banner = document.getElementById("storage-banner");
-    if (banner) {
-      banner.style.background = "#FCE4E4";
-      banner.style.borderColor = "#F0B4B4";
-      banner.style.color = "#8A1F1F";
-      banner.textContent = "⚠ เชื่อมต่อ Firebase ไม่สำเร็จ: " + msg + " — ตรวจสอบว่าแก้ค่า firebaseConfig ในซอร์สโค้ดเป็นของโปรเจกต์จริงแล้ว และเปิดใช้ Firestore + Anonymous sign-in ใน Firebase Console แล้ว ข้อมูลจะยังใช้งานได้ชั่วคราวในเครื่องนี้จนกว่าจะแก้ให้ถูกต้อง";
-    }
-    _resolveReady(); // never hang forever — let the app continue with a local fallback
-  }
-
-  let _db, _auth;
-  try {
-    if (String(firebaseConfig.apiKey || "").indexOf("PASTE_YOUR") === 0) {
-      throw new Error("ยังไม่ได้ใส่ค่า firebaseConfig (ยังเป็นค่าเริ่มต้น PASTE_YOUR_...)");
-    }
-    firebase.initializeApp(firebaseConfig);
-    _db = firebase.firestore();
-    _auth = firebase.auth();
-    _auth.onAuthStateChanged(user => {
-      if (user) {
-        _authResolved = true;
-        _resolveReady();
-      }
-    });
-    _auth.signInAnonymously().catch(err => {
-      console.error("Firebase: เข้าสู่ระบบแบบไม่ระบุตัวตนไม่สำเร็จ ตรวจสอบว่าเปิดใช้ Anonymous sign-in ใน Firebase Console แล้วหรือยัง", err);
-      _showFirebaseError(err.message || String(err));
-    });
-    // safety net: if auth never responds within 10s (network blocked, misconfigured project, etc.), stop waiting
-    setTimeout(() => {
-      if (_firebaseOk && !_authResolved) _showFirebaseError("หมดเวลารอการเชื่อมต่อ (10 วินาที)");
-    }, 10000);
-  } catch (err) {
-    console.error("Firebase: ตั้งค่าไม่สำเร็จ", err);
-    _showFirebaseError(err.message || String(err));
-  }
-
-  // Local fallback store used only if Firebase never connects, so the app is still usable
-  // (data in this fallback is temporary — lost on refresh — until firebaseConfig is fixed).
-  const _localFallback = {};
-
-  // window.storage API เดิม (get/set/delete/list) แต่เก็บข้อมูลจริงถาวรบน Firestore แทนหน่วยความจำชั่วคราว
-  window.storage = (function () {
-    function ref(key) {
-      // "shared" ถูกเก็บไว้เพื่อให้ตรงกับรูปแบบ API เดิมเท่านั้น — ทุก key ในแอปนี้ถูกเรียกด้วย
-      // shared=true อยู่แล้ว (ข้อมูลใช้ร่วมกันทั้งทีมเสมอ ไม่แยกตามผู้เปิดไฟล์)
-      return _db.collection(FIRESTORE_COLLECTION).doc(key);
-    }
-    return {
-      get: async function (key, shared) {
-        await _storageReady;
-        if (!_firebaseOk) return (key in _localFallback) ? { key: key, value: _localFallback[key], shared: !!shared } : null;
-        const snap = await ref(key).get();
-        if (!snap.exists) return null;
-        const data = snap.data();
-        return { key: key, value: data.value, shared: !!shared };
-      },
-      set: async function (key, value, shared) {
-        await _storageReady;
-        if (!_firebaseOk) {
-          _localFallback[key] = value;
-          return { key: key, value: value, shared: !!shared };
-        }
-        await ref(key).set({
-          value: value,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        return { key: key, value: value, shared: !!shared };
-      },
-      "delete": async function (key, shared) {
-        await _storageReady;
-        if (!_firebaseOk) {
-          const existed = key in _localFallback;
-          delete _localFallback[key];
-          return { key: key, deleted: existed, shared: !!shared };
-        }
-        const snap = await ref(key).get();
-        const existed = snap.exists;
-        await ref(key).delete();
-        return { key: key, deleted: existed, shared: !!shared };
-      },
-      list: async function (prefix, shared) {
-        await _storageReady;
-        if (!_firebaseOk) {
-          const keys = Object.keys(_localFallback).filter(k => !prefix || k.indexOf(prefix) === 0);
-          return { keys: keys, prefix: prefix, shared: !!shared };
-        }
-        const qs = await _db.collection(FIRESTORE_COLLECTION).get();
-        const keys = qs.docs.map(d => d.id).filter(id => !prefix || id.indexOf(prefix) === 0);
-        return { keys: keys, prefix: prefix, shared: !!shared };
-      }
-    };
-  })();
 const {
   useState,
   useEffect,
@@ -842,6 +692,12 @@ function App() {
     const next = pos.filter(p => p.id !== id);
     await persist(next);
     showToast("ลบ PO แล้ว");
+  }
+  async function deletePos(ids) {
+    const idSet = new Set(ids);
+    const next = pos.filter(p => !idSet.has(p.id));
+    await persist(next);
+    showToast(idSet.size > 1 ? `ลบ PO แล้ว ${idSet.size} รายการ` : "ลบ PO แล้ว");
   }
   async function addReceipt(poId, lineId, receipt) {
     const next = pos.map(p => {
@@ -1239,6 +1095,7 @@ function App() {
     setExpandedId: setExpandedId,
     onEdit: startEditPo,
     onDelete: deletePo,
+    onDeleteMany: deletePos,
     onAddReceipt: addReceipt,
     onRemoveReceipt: removeReceipt
   }), pos.length > 0 && view === "summary" && /*#__PURE__*/React.createElement(SummaryView, {
@@ -1430,9 +1287,40 @@ function PoList({
   setExpandedId,
   onEdit,
   onDelete,
+  onDeleteMany,
   onAddReceipt,
   onRemoveReceipt
 }) {
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const visibleIds = pos.map(p => p.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+  const someVisibleSelected = visibleIds.some(id => selectedIds.includes(id));
+  function toggleSelectOne(id) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setConfirmBulkDelete(false);
+  }
+  function toggleSelectAllVisible() {
+    setConfirmBulkDelete(false);
+    if (allVisibleSelected) {
+      setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  }
+  function clearSelection() {
+    setSelectedIds([]);
+    setConfirmBulkDelete(false);
+  }
+  async function handleBulkDelete() {
+    if (!confirmBulkDelete) {
+      setConfirmBulkDelete(true);
+      return;
+    }
+    await onDeleteMany(selectedIds);
+    setSelectedIds([]);
+    setConfirmBulkDelete(false);
+  }
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1468,7 +1356,64 @@ function PoList({
   }, /*#__PURE__*/React.createElement("i", {
     className: "ti " + (sortDir === "desc" ? "ti-sort-descending" : "ti-sort-ascending"),
     "aria-hidden": "true"
-  }), "วันที่ ", sortDir === "desc" ? "ใหม่→เก่า" : "เก่า→ใหม่")), pos.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }), "วันที่ ", sortDir === "desc" ? "ใหม่→เก่า" : "เก่า→ใหม่")), pos.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap",
+      marginBottom: 12,
+      padding: "8px 12px",
+      background: someVisibleSelected ? "#FFF3DA" : "#F3F0E6",
+      border: "1px solid " + (someVisibleSelected ? "#F2D9A0" : "#E5E1D6"),
+      borderRadius: 10
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      fontSize: 13,
+      cursor: "pointer",
+      userSelect: "none"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: allVisibleSelected,
+    ref: el => {
+      if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+    },
+    onChange: toggleSelectAllVisible
+  }), "เลือกทั้งหมด (", visibleIds.length, ")"), selectedIds.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      color: "#6b6458"
+    }
+  }, "เลือกแล้ว ", selectedIds.length, " รายการ"), !confirmBulkDelete ? /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...s.btnGhostSmall,
+      color: "#A32D2D",
+      borderColor: "#A32D2D"
+    },
+    onClick: handleBulkDelete
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "ti ti-trash",
+    "aria-hidden": "true"
+  }), " ลบที่เลือก") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...s.btnGhostSmall,
+      color: "#FFFFFF",
+      background: "#A32D2D",
+      borderColor: "#A32D2D"
+    },
+    onClick: handleBulkDelete
+  }, "ยืนยันลบ ", selectedIds.length, " รายการ"), /*#__PURE__*/React.createElement("button", {
+    style: s.btnGhostSmall,
+    onClick: () => setConfirmBulkDelete(false)
+  }, "ยกเลิก")), /*#__PURE__*/React.createElement("button", {
+    style: s.btnGhostSmall,
+    onClick: clearSelection
+  }, "ล้างการเลือก"))), pos.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       color: "#8a8470",
@@ -1488,7 +1433,9 @@ function PoList({
     onEdit: () => onEdit(po),
     onDelete: () => onDelete(po.id),
     onAddReceipt: onAddReceipt,
-    onRemoveReceipt: onRemoveReceipt
+    onRemoveReceipt: onRemoveReceipt,
+    selected: selectedIds.includes(po.id),
+    onToggleSelect: () => toggleSelectOne(po.id)
   }))));
 }
 function PoCard({
@@ -1498,7 +1445,9 @@ function PoCard({
   onEdit,
   onDelete,
   onAddReceipt,
-  onRemoveReceipt
+  onRemoveReceipt,
+  selected,
+  onToggleSelect
 }) {
   const total = poTotal(po);
   const received = poReceivedAmount(po);
@@ -1507,7 +1456,13 @@ function PoCard({
   const colors = STATUS_COLOR[status];
   const [confirmDelete, setConfirmDelete] = useState(false);
   return /*#__PURE__*/React.createElement("div", {
-    style: s.poCard
+    style: {
+      ...s.poCard,
+      ...(selected ? {
+        borderColor: "#B5621B",
+        boxShadow: "0 0 0 1px #B5621B inset"
+      } : {})
+    }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1516,7 +1471,21 @@ function PoCard({
       cursor: "pointer"
     },
     onClick: onToggle
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: !!selected,
+    onClick: e => e.stopPropagation(),
+    onChange: onToggleSelect,
+    "aria-label": "เลือก PO " + po.poNumber,
+    style: {
+      marginTop: 4,
+      marginRight: 12,
+      flexShrink: 0,
+      width: 16,
+      height: 16,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       minWidth: 0
