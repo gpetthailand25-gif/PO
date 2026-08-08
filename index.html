@@ -660,6 +660,7 @@ function App() {
       lines: [{
         id: uid("ln"),
         name: "",
+        code: "",
         qty: "",
         unit: "",
         price: "",
@@ -752,6 +753,7 @@ function App() {
           date: header.findIndex(h => h.includes("date") && !h.includes("delivery") || h.includes("วันที่") && !h.includes("จัดส่ง")),
           deliveryDate: header.findIndex(h => h.includes("delivery") || h.includes("จัดส่ง") || h.includes("ship")),
           item: header.findIndex(h => h.includes("item") || h.includes("สินค้า") || h.includes("name")),
+          code: header.findIndex(h => h.includes("code") || h.includes("sku") || h.includes("รหัส")),
           qty: header.findIndex(h => h.includes("qty") || h.includes("จำนวน")),
           unit: header.findIndex(h => h.includes("unit") || h.includes("หน่วย")),
           price: header.findIndex(h => h.includes("price") || h.includes("ราคา"))
@@ -780,6 +782,7 @@ function App() {
           grouped[poNum].lines.push({
             id: uid("ln"),
             name: (r[idx.item] || "").trim(),
+            code: idx.code !== -1 ? (r[idx.code] || "").trim() : "",
             qty: Number(r[idx.qty]) || 0,
             unit: idx.unit !== -1 ? (r[idx.unit] || "").trim() : "",
             price: Number(r[idx.price]) || 0,
@@ -833,8 +836,8 @@ function App() {
     });
   }
   function downloadCsvTemplate() {
-    const headers = ["PO", "Vendor", "Date", "DeliveryDate", "Item", "Qty", "Unit", "Price"];
-    const sampleRows = [["PO-2026-001", "บริษัท ตัวอย่าง จำกัด", todayStr(), "", "กระดาษ A4 80แกรม", "100", "ลัง", "850"], ["PO-2026-001", "บริษัท ตัวอย่าง จำกัด", todayStr(), "", "ปากกาลูกลื่นสีน้ำเงิน", "50", "โหล", "120"], ["PO-2026-002", "หจก. ตัวอย่างสอง", todayStr(), "", "แฟ้มเอกสาร A4", "30", "เล่ม", "45"]];
+    const headers = ["PO", "Vendor", "Date", "DeliveryDate", "Item", "Code", "Qty", "Unit", "Price"];
+    const sampleRows = [["PO-2026-001", "บริษัท ตัวอย่าง จำกัด", todayStr(), "", "กระดาษ A4 80แกรม", "PPR-A4-80", "100", "ลัง", "850"], ["PO-2026-001", "บริษัท ตัวอย่าง จำกัด", todayStr(), "", "ปากกาลูกลื่นสีน้ำเงิน", "PEN-BL-01", "50", "โหล", "120"], ["PO-2026-002", "หจก. ตัวอย่างสอง", todayStr(), "", "แฟ้มเอกสาร A4", "FLD-A4-01", "30", "เล่ม", "45"]];
     const escapeCsv = v => {
       const s = String(v ?? "");
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -859,7 +862,8 @@ function App() {
         const q = search.trim().toLowerCase();
         const inPo = p.poNumber.toLowerCase().includes(q);
         const inVendor = (p.vendor || "").toLowerCase().includes(q);
-        if (!inPo && !inVendor) return false;
+        const inLine = (p.lines || []).some(l => (l.code || "").toLowerCase().includes(q) || (l.name || "").toLowerCase().includes(q));
+        if (!inPo && !inVendor && !inLine) return false;
       }
       return true;
     });
@@ -1072,7 +1076,7 @@ function App() {
     onClick: downloadCsvTemplate
   }, "ดาวน์โหลดเทมเพลต CSV")), /*#__PURE__*/React.createElement("div", {
     style: s.csvHint
-  }, "รูปแบบไฟล์ CSV: คอลัมน์ PO, Vendor, Date, DeliveryDate (ไม่บังคับ), Item, Qty, Unit, Price (1 แถว = 1 รายการสินค้า, PO เดียวกันใส่เลข PO ซ้ำได้หลายแถว) — กดปุ่ม \"ดาวน์โหลดเทมเพลต CSV\" เพื่อดูตัวอย่างไฟล์")), pos.length > 0 && view === "dashboard" && /*#__PURE__*/React.createElement(Dashboard, {
+  }, "รูปแบบไฟล์ CSV: คอลัมน์ PO, Vendor, Date, DeliveryDate (ไม่บังคับ), Item, Code (ไม่บังคับ), Qty, Unit, Price (1 แถว = 1 รายการสินค้า, PO เดียวกันใส่เลข PO ซ้ำได้หลายแถว) — กดปุ่ม \"ดาวน์โหลดเทมเพลต CSV\" เพื่อดูตัวอย่างไฟล์")), pos.length > 0 && view === "dashboard" && /*#__PURE__*/React.createElement(Dashboard, {
     monthLabel: monthLabel(thisMonthKey),
     monthTotal: monthTotal,
     monthReceived: monthReceived,
@@ -1329,7 +1333,7 @@ function PoList({
       flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement("input", {
-    placeholder: "ค้นหาเลข PO หรือชื่อผู้ขาย...",
+    placeholder: "ค้นหาเลข PO, ผู้ขาย หรือรหัส/ชื่อสินค้า...",
     value: search,
     onChange: e => setSearch(e.target.value),
     style: {
@@ -1627,7 +1631,25 @@ function LineItem({
       fontWeight: 500,
       fontSize: 14
     }
-  }, line.name), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      flexWrap: "wrap"
+    }
+  }, line.code && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: "#1A5F8A",
+      background: "#E8F4FD",
+      border: "1px solid #C6E4F7",
+      borderRadius: 5,
+      padding: "1px 6px",
+      whiteSpace: "nowrap",
+      fontFamily: "var(--font-mono, monospace)"
+    }
+  }, line.code), /*#__PURE__*/React.createElement("span", null, line.name))), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12.5,
       color: "#6b6458",
@@ -1752,6 +1774,7 @@ function PoEditor({
       lines: [...draft.lines, {
         id: uid("ln"),
         name: "",
+        code: "",
         qty: "",
         unit: "",
         price: "",
@@ -1858,41 +1881,30 @@ function PoEditor({
     onChange: e => {
       const value = e.target.value;
       const match = ORDER_ITEMS_DATA.find(it => it.name === value);
-      if (match && !line.unit) {
+      if (match && (!line.unit || !line.code)) {
         setDraft({
           ...draft,
           lines: draft.lines.map(l => l.id === line.id ? {
             ...l,
             name: value,
-            unit: match.unit
+            unit: l.unit || match.unit,
+            code: l.code || match.code
           } : l)
         });
       } else {
         updateLine(line.id, "name", value);
       }
     }
-  }), (() => {
-    const matched = ORDER_ITEMS_DATA.find(it => it.name === line.name);
-    return matched ? /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 10.5,
-        color: "#1A5F8A",
-        background: "#E8F4FD",
-        border: "1px solid #C6E4F7",
-        borderRadius: 5,
-        padding: "2px 6px",
-        whiteSpace: "nowrap",
-        alignSelf: "center",
-        fontFamily: "var(--font-mono, monospace)"
-      }
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "ti ti-list",
-      "aria-hidden": "true",
-      style: {
-        marginRight: 2
-      }
-    }), matched.code) : null;
-  })(), /*#__PURE__*/React.createElement("input", {
+  }), /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...s.input,
+      width: 110,
+      fontFamily: "var(--font-mono, monospace)"
+    },
+    placeholder: "รหัสสินค้า",
+    value: line.code || "",
+    onChange: e => updateLine(line.id, "code", e.target.value)
+  }), /*#__PURE__*/React.createElement("input", {
     type: "number",
     style: {
       ...s.input,
